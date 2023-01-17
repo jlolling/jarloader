@@ -26,7 +26,7 @@ public class JarLoader {
      */
     public static synchronized void addJarToClassPath(File jarFile) throws Exception {
         if (jarFile == null) {
-            throw new NullPointerException();
+            throw new IllegalArgumentException("jarFile cannot be null");
         }
         if (!jarFile.exists()) {
             throw new FileNotFoundException(jarFile.getAbsolutePath());
@@ -111,11 +111,11 @@ public class JarLoader {
                     method.setAccessible(true);
                     addUrlMethod = method;
                 } catch (NoSuchMethodException nsm) {
-                    throw new AssertionError(); // violates URLClassLoader API!
+                    throw new IllegalStateException("The class " + URLClassLoader.class.getName() + " should have an addUrl() method, but its not!");
                 }
             } else {
                 throw new UnsupportedOperationException(
-                        "SystemClassloader: " + systemClassLoader.getClass() + " is not an instance of URLClassLoader. Please take care you setup your java command line and add: -javaagent:/path/to/jarloader-<version>.jar"
+                        "SystemClassloader: " + systemClassLoader.getClass() + " is not an instance of URLClassLoader"
                 );
             }
         }
