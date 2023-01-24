@@ -22,11 +22,13 @@ import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.jar.JarFile;
 
 /**
  * Loader of jar files at runtime. Use the official allowed and stable method of Instrumentation
- * Add to the java command line: -javaagent:/your/path/to/jarloader-<version>.jar
+ * Add to the java command line: -javaagent:/your/path/to/jarloader-1.0.jar
  * 
  * @author jan.lolling@gmail.com
  * Highly inspired by Chris Jennings
@@ -60,12 +62,13 @@ public class JarLoader {
         if (jarFile.isDirectory()) {
             throw new IOException("Is a directory and not a jar file: " + jarFile.getAbsolutePath());
         }
-        if (jarFile.getName().equalsIgnoreCase(".jar") == false) {
+        if (jarFile.getName().toLowerCase().endsWith(".jar") == false) {
         	throw new IllegalArgumentException("File: " + jarFile.getAbsolutePath() + " is not a jar file.");
         }
         // add the jar using instrumentation
         if (inst != null) {
-            inst.appendToSystemClassLoaderSearch(new JarFile(jarFile));
+        	JarFile j = new JarFile(jarFile);
+            inst.appendToSystemClassLoaderSearch(j);
             return;
         }
         // Load via fall back reflection method. Will not work under Java9+
@@ -84,15 +87,13 @@ public class JarLoader {
 	/**
 	 * Called by the JRE. <em>Do not call this method from user code.</em>
 	 *
-	 * <p>
 	 * This method is called when the agent is attached to a running process. In
 	 * practice, this is not how JarLoader is used, but it is implemented should you
 	 * need it.
-	 * </p
-	 * <p>
-	 * For this to work the {@code MANIFEST.MF} file <strong>must</strong> include
+	 * 
+	 * For this to work the {@code MANIFEST.MF} file must include
 	 * the line {@code Agent-Class: de.jlo.talendcomp.loadjaragent.JarLoader}.
-	 * </p>
+	 * 
 	 * @param agentArgs       agent arguments; currently not used
 	 * @param instrumentation provided by the Java Runtime
 	 */
@@ -109,15 +110,13 @@ public class JarLoader {
 	/**
 	 * Called by the JRE. <em>Do not call this method from user code.</em>
 	 *
-	 * <p>
 	 * This method is called when the agent is attached to a running process. In
 	 * practice, this is not how JarLoader is used, but it is implemented should you
 	 * need it.
-	 * </p
-	 * <p>
-	 * For this to work the {@code MANIFEST.MF} file <strong>must</strong> include
+	 * 
+	 * For this to work the {@code MANIFEST.MF} file must include
 	 * the line {@code Agent-Class: de.jlo.talendcomp.loadjaragent.JarLoader}.
-	 * </p>
+	 * 
 	 * @param agentArgs       agent arguments; currently not used
 	 * @param instrumentation provided by the Java Runtime
 	 */
@@ -138,11 +137,35 @@ public class JarLoader {
                 }
             } else {
                 throw new UnsupportedOperationException(
-                        "SystemClassloader: " + systemClassLoader.getClass() + " is not an instance of URLClassLoader"
+                        "Using fallback solution because Java agent instrumentation did not happend: SystemClassloader: " + systemClassLoader.getClass() + " is not an instance of URLClassLoader. This is typicall for Java9+. Please setup Java agent by using -javaagent /path/to/jarloader-1.0.jar"
                 );
             }
         }
         return addUrlMethod;
     }
+
+	public static String getLoadedClasses() {
+		StringBuilder sb = new StringBuilder();
+		if (inst != null) {
+			Class<?>[] lc = inst.getAllLoadedClasses();
+			Arrays.sort(lc, 0, lc.length, new Comparator<Class<?>>() {
+
+				@Override
+				public int compare(Class<?> c1, Class<?> c2) {
+					return c1.getName().compareTo(c2.getName());
+				}
+				
+			});
+			for (Class<?> c : lc) {
+				String name = c.getName();
+				if (name.startsWith("java") || name.startsWith("com.sun") || name.startsWith("jdk") || name.startsWith("sun") || name.startsWith("org.omg") || name.startsWith("com.oracle") || name.startsWith("[")) {
+					continue;
+				}
+				sb.append(name);
+				sb.append("\n");
+			}
+		}
+		return sb.toString();
+	}
 
 }

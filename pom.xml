@@ -54,6 +54,7 @@
 					<archive>
 						<manifestEntries>
 							<Agent-Class>de.jlo.talendcomp.loadjaragent.JarLoader</Agent-Class>
+							<Premain-Class>de.jlo.talendcomp.loadjaragent.JarLoader</Premain-Class>
 							<Name>${project.name}</Name>
 							<Implementation-Vendor>Jan Lolling</Implementation-Vendor>
 						</manifestEntries>
